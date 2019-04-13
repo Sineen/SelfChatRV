@@ -15,7 +15,7 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         TextView textView;
         MyViewHolder(TextView v) {
             super(v);
-            textView = ((TextView) itemView.findViewById(R.id.plain_text_output));
+            textView = ((TextView) v.findViewById(R.id.plain_text_output));
         }
 
         public void display(String message) {
@@ -24,7 +24,7 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
     }
 
-    ArrayList<String> myMessages = new ArrayList<String>();
+    ArrayList<String> myMessages;
 
     public MyAdapter(){
         myMessages = new ArrayList<String>();
