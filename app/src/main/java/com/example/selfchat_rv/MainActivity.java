@@ -31,13 +31,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ViewAdapter = new MyAdapter();
         recyclerView.setAdapter(ViewAdapter);
 
-//        if (savedInstanceState != null)
-//        {
-//            input.setText(savedInstanceState.getString("in"));
-//            //recyclerView (savedInstanceState.getString("out"));
-//            ViewAdapter.setData(savedInstanceState.getStringArrayList("list"));
-//            ViewAdapter.supportConfigurationChange();
-//        }
+        if (savedInstanceState != null)
+        {
+            input.setText(savedInstanceState.getString("in"));
+            //recyclerView (savedInstanceState.getString("out"));
+            ViewAdapter.setData(savedInstanceState.getStringArrayList("list"));
+            ViewAdapter.supportConfigurationChange();
+        }
 
         button.setOnClickListener(this);
 
@@ -49,12 +49,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         outState.putStringArrayList("list", ViewAdapter.getData());
     }
 
-    public void onRestoreInstanceState(Bundle savedInstanceState){
-        super.onRestoreInstanceState(savedInstanceState);
-        input.setText(savedInstanceState.getString("in"));
-        ViewAdapter.myMessages = (savedInstanceState.getStringArrayList("list"));
-        ViewAdapter.supportConfigurationChange();
-    }
+//    public void onRestoreInstanceState(Bundle savedInstanceState){
+//        super.onRestoreInstanceState(savedInstanceState);
+//        input.setText(savedInstanceState.getString("in"));
+//        ViewAdapter.myMessages = (savedInstanceState.getStringArrayList("list"));
+//        ViewAdapter.supportConfigurationChange();
+//    }
 
     @Override
     public void onClick(View view) {
