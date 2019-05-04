@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
         new AlertDialog.Builder(this)
                 .setTitle("Are you sure you wana delete it???")
                 .setMessage("this will be the point of no return ")
-                .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+                .setPositiveButton("Yes Please", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         ViewAdapter.deleteMessage(position);
@@ -103,7 +103,7 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
 
                     }
                 })
-                .setNegativeButton("No", new DialogInterface.OnClickListener() {
+                .setNegativeButton("Hell No", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         Toast.makeText(getApplicationContext(),
