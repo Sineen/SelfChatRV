@@ -42,8 +42,10 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
         // use a linear layout manager
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        int size = MySharedPrefrance.getInt(DATA_SIZE, 0);
         MySharedPrefrance = PreferenceManager.getDefaultSharedPreferences(this);
+
+
+        int size = MySharedPrefrance.getInt(DATA_SIZE, 0);
         MyEditor = MySharedPrefrance.edit();
         ViewAdapter = new MyAdapter(size , MySharedPrefrance, MyEditor);
         ViewAdapter.setClickListener((MyAdapter.recItemOnLongClick) this);
@@ -88,13 +90,13 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
 
 
     @Override
-    public void itemLongClick(View view, int position) {
+    public void itemLongClick(View view, final int position) {
         new AlertDialog.Builder(this)
                 .setTitle("Are you sure you wana delete it???")
                 .setMessage("this will be the point of no return ")
                 .setPositiveButton("Yes", new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(DialogInterface dialogInterface, int position) {
+                    public void onClick(DialogInterface dialogInterface, int i) {
                         ViewAdapter.deleteMessage(position);
                         Toast.makeText(getApplicationContext(),
                                 "message is Gone never to be back again", Toast.LENGTH_LONG).show();
@@ -105,7 +107,7 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
                     @Override
                     public void onClick(DialogInterface dialogInterface, int i) {
                         Toast.makeText(getApplicationContext(),
-                                "deleting process was aborted", Toast.LENGTH_LONG).show();
+                                "Nothing to hide I see :)", Toast.LENGTH_LONG).show();
                     }
                 })
                 .setNeutralButton("Cancel", null)

@@ -36,13 +36,13 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         myMessages = list;
     }
 
-    public class MyViewHolder extends RecyclerView.ViewHolder {
+    public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnLongClickListener {
         // each data item is just a string in this case
         TextView textView;
-        MyViewHolder(View v) {
+        public MyViewHolder(View v) {
             super(v);
             textView = ((TextView) v.findViewById(R.id.plain_text_output));
-            v.setOnLongClickListener((View.OnLongClickListener) this);
+            v.setOnLongClickListener(this);
         }
 
         public void display(String message) {
