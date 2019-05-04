@@ -7,13 +7,32 @@ import android.widget.TextView;
 
 import java.util.ArrayList;
 
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
-    public void setData(ArrayList<String> list) {
-        myMessages = list;
-    }
+//    static class MsgCallback extends DiffUtil.ItemCallback<Messege> {
+//
+//        @Override
+//        public boolean areItemsTheSame(@NonNull Messege oldItem, @NonNull Messege newItem) {
+//            return oldItem.equals(newItem);
+//        }
+//
+//        @Override
+//        public boolean areContentsTheSame(@NonNull Messege oldItem, @NonNull Messege newItem) {
+//            return oldItem.equals(newItem);
+//        }
+//    }
+//
+//
+//    interface MsgClickCallback {
+//        void onMsgClick(Messege msg);
+//    }
+//    public void setData(ArrayList<String> list) {
+//        myMessages = list;
+//    }
 
     public static class MyViewHolder extends RecyclerView.ViewHolder {
         // each data item is just a string in this case
