@@ -19,7 +19,6 @@ public class MainActivity extends AppCompatActivity implements MyUtil.MsgClickCa
 
     EditText input;
     RecyclerView recyclerView;
-    MyAdapter ViewAdapter;
     Button button;
 
     MyDatabase room;
