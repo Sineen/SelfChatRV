@@ -1,4 +1,5 @@
 package com.example.selfchat_rv;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -6,6 +7,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import android.annotation.SuppressLint;
 import android.content.DialogInterface;
+import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -14,10 +16,23 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.firebase.FirebaseApp;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentChange;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QuerySnapshot;
+
+import java.util.ArrayList;
+import java.util.Map;
+
 public class MainActivity extends AppCompatActivity implements MyAdapter.recItemOnLongClick{
 
     public static final String DATA_SIZE = "Datasize";
     public static final String DATA_LIST = "sent";
+    public static final String SHAREDPREFRENCE_FIRST = "first_launch";
 
     public EditText input;
     public RecyclerView recyclerView;
@@ -26,6 +41,9 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
 
     public SharedPreferences MySharedPrefrance;
     public SharedPreferences.Editor MyEditor;
+
+    public FirebaseFirestore fireBase;
+    public CollectionReference collectionReference;
 
     @SuppressLint("CommitPrefEdits")
     @Override
@@ -46,23 +64,31 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
 
         MySharedPrefrance = PreferenceManager.getDefaultSharedPreferences(this);
 
-
+        FirebaseApp.initializeApp(MainActivity.this);
+        fireBase = FirebaseFirestore.getInstance();
+        collectionReference = fireBase.collection(MyAdapter.COLLECTION);
+        new getFireBaseId().execute();
         int size = MySharedPrefrance.getInt(DATA_SIZE, 0);
         MyEditor = MySharedPrefrance.edit();
-        ViewAdapter = new MyAdapter(size , MySharedPrefrance, MyEditor);
-        ViewAdapter.setClickListener((MyAdapter.recItemOnLongClick) this);
+        ViewAdapter = new MyAdapter(size , MySharedPrefrance, MyEditor, fireBase);
+        ViewAdapter.setClickListener( this);
         recyclerView.setAdapter(ViewAdapter);
 
         if(size != 0 ) {
             ViewAdapter.loading();
+        } else if (MySharedPrefrance.getBoolean(SHAREDPREFRENCE_FIRST, true)) {
+                new syncLocalToRemoteFireBase().execute();
+                MyEditor.putBoolean(SHAREDPREFRENCE_FIRST, false);
+                MyEditor.apply();
         }
+
 
 
         if (savedInstanceState != null)
         {
             String previusMessages = (savedInstanceState.getString("in"));
-            ViewAdapter.setData(savedInstanceState.getStringArrayList("list"));
             input.setText(previusMessages);
+            ViewAdapter.loading();
             ViewAdapter.supportConfigurationChange();
         }
 
@@ -78,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
                             , Toast.LENGTH_LONG).show();
                     return;
                 }
-                ViewAdapter.addMsg(msg);
+                new insertDataToFireBase().execute(msg);
 
             }
         });
@@ -87,7 +113,48 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putString("in", input.getText().toString());
-        outState.putStringArrayList("list", ViewAdapter.getData());
+    }
+
+    @Override
+    protected void onStart()
+    {
+        super.onStart();
+        ViewAdapter.setData(new ArrayList<Message>());
+        collectionReference.addSnapshotListener(this, new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots,
+                                @Nullable FirebaseFirestoreException e) {
+                if(e != null)
+                {
+                    return;
+                }
+                for(DocumentChange documentChange: queryDocumentSnapshots.getDocumentChanges())
+                {
+                    DocumentSnapshot documentSnapshot = documentChange.getDocument();
+                    String id = documentSnapshot.getId();
+                    boolean isDocumentDeleted = documentChange.getOldIndex() != -1;
+                    boolean isDocumentAdded = documentChange.getNewIndex() != -1;
+                    if (isDocumentDeleted)
+                    {
+                        for(int i = 0 ; i < ViewAdapter.getData().size(); i++)
+                            if (ViewAdapter.getData().get(i).getId().equals(id)) {
+                                ViewAdapter.deleteMessage(i);
+                                break;
+                            }
+                    }
+
+                    else if(isDocumentAdded && !
+                            documentSnapshot.getId().equals(MyAdapter.PROJEC_ID))
+                    {
+                        Map<String, Object> new_doc_data = documentSnapshot.getData();
+                        String Id = new_doc_data.get(MyAdapter.ID_KEY)+"";
+                        String text = new_doc_data.get(MyAdapter.TEXT_KEY)+"";
+                        String timestamp = new_doc_data.get(MyAdapter.TIME_STAMP_KEY)+"";
+                        ViewAdapter.addMsg(text, Id, timestamp);
+                    }
+                }
+            }
+        });
     }
 
 
@@ -115,4 +182,35 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
                 .setNeutralButton("Cancel", null)
                 .show();
     }
+
+    // THREAD to read from fire base*/
+    private class getFireBaseId extends AsyncTask<Void, Void, Void>
+    {
+        @Override
+        protected Void doInBackground(Void... voids) {
+            ViewAdapter.updateIDs(true);
+            return null;
+        }
+    }
+
+    /*------------------------  UI BACKGROUND THREAD ACTIVATES INSERTION ------------------------*/
+    private class insertDataToFireBase extends AsyncTask<String, Void, Void>
+    {
+        @Override
+        protected Void doInBackground(String... strings) {
+            ViewAdapter.AddMsgToFB(strings[0]);
+            return null;
+        }
+    }
+
+    /*---------------------  UI BACKGROUND THREAD ACTIVATES SYNCHRONIZATION ---------------------*/
+    public class syncLocalToRemoteFireBase extends AsyncTask<Void, Void, Void>
+    {
+        @Override
+        protected Void doInBackground(Void... voids) {
+            ViewAdapter.loadDataFromFB();
+            return null;
+        }
+    }
+
 }

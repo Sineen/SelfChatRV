@@ -9,17 +9,20 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.content.SharedPreferences;
 
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Date.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,12 +36,12 @@ import static com.example.selfchat_rv.MainActivity.DATA_LIST;
 
 class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
-    public static final String PROJEC_ID = "1ab2ca9b5913e26b";
+    public static final String PROJEC_ID = "oLi5oPOG4Q44q9nbekLE";
     public static final String PROJEC_ID_KEY = "project id";
-    private static final String TIME_STAMP_KEY = "timeStamp" ;
-    private static final String TEXT_KEY = "content";
-    private static final String ID_KEY = "id";
-    private static final String MESSAGES_KEY = "messages";
+    public static final String TIME_STAMP_KEY = "TimeStamp" ;
+    public static final String TEXT_KEY = "Text";
+    public static final String ID_KEY = "Id";
+    public static final String COLLECTION = "messages";
 
     public int counterID = 0;
 
@@ -84,9 +87,9 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
             v.setOnLongClickListener(this);
         }
 
-        public void display(String message) {
-            textView.setText(message);
-        }
+//        public void display(String message) {
+//            textView.setText(message);
+//        }
 
         public boolean onLongClick(View v) {
             if (clicked != null) {
@@ -127,6 +130,11 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
     @Override
     public int getItemCount() {
+        if (myMessages == null)
+        {
+            myMessages = new ArrayList<>();
+            return 0;
+        }
         return myMessages.size();
     }
 
@@ -151,7 +159,7 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         myMessages.remove(position);
         DataSize --;
         saveEditions();
-        notifyDataSetChanged();
+        notifyItemRemoved(position);
     }
 
     void setClickListener(recItemOnLongClick itemClick) {
@@ -171,11 +179,28 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         myMessages = gson.fromJson(rjson, type);
     }
 
-    private int updateID()
+    public int updateIDs(boolean flag)
     {
-        int oldId = counterID;
-        counterID++;
-        return oldId;
+        if(flag){
+            counterID++;}
+        DocumentReference washingtonRef = dataBase.collection(COLLECTION).
+                document(PROJEC_ID);
+
+        washingtonRef
+                .update(PROJEC_ID_KEY, counterID)
+                .addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Log.d("", "DocumentSnapshot successfully updated!");
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("", "Error updating document", e);
+                    }
+                });
+        return counterID;
     }
 
 
@@ -185,16 +210,19 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
 
     // Add a new document to the fire base and increment local id
-    public void AddMsgToFF(final String msgText){
-        String time = dateFormat.format(new Date());
-        int id = updateID();
+    public void AddMsgToFB(final String msgText){
+        //create map and add text
         Map<String, Object> message = new HashMap<>();
-
-        message.put(TIME_STAMP_KEY, time);
         message.put(TEXT_KEY, msgText);
+
+        //get set time
+        String time = dateFormat.format(new Date());
+        message.put(TIME_STAMP_KEY, time);
+        // get set new id
+        int id = updateIDs(true);
         message.put(ID_KEY, id);
 
-        dataBase.collection(MESSAGES_KEY)
+        dataBase.collection(COLLECTION)
                 .add(message)
                 .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
                     @Override
@@ -215,7 +243,7 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
     private class DeleteFromFireBase extends AsyncTask<String, Void, Void> {
         @Override
         protected Void doInBackground(String... strings) {
-            dataBase.collection(MESSAGES_KEY).document(strings[0])
+            dataBase.collection(COLLECTION).document(strings[0])
                     .delete()
                     .addOnSuccessListener(new OnSuccessListener<Void>() {
                         @Override
@@ -232,4 +260,39 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
             return null;
         }
     }
+
+    public void loadDataFromFB()
+    {
+        final ArrayList<Message> d = new ArrayList<Message>();
+        dataBase.collection(COLLECTION)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            String id, timestamp, content;
+                            Map<String, Object> msg;
+
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                if(!document.getId().equals(PROJEC_ID))
+                                {
+                                    msg = document.getData();
+                                    id = msg.get(ID_KEY) + "";
+                                    timestamp = msg.get(TIME_STAMP_KEY) + "";
+                                    content = msg.get(TEXT_KEY) + "";
+                                    d.add(new Message(id, timestamp, content));
+                                }
+                            }
+
+                            for (Message message: d)
+                                addMsg(message.getId(), message.getTimeStamp(), message.getText());
+                            loading();
+
+                        } else {
+                            Log.d(" ", "Error getting documents: ", task.getException());
+                        }
+                    }
+                });
+    }
+
 }
