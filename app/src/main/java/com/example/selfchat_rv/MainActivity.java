@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.preference.PreferenceManager;
 import android.content.SharedPreferences;
@@ -18,14 +19,15 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
     public static final String DATA_SIZE = "Datasize";
     public static final String DATA_LIST = "sent";
 
-    EditText input;
-    RecyclerView recyclerView;
-    MyAdapter ViewAdapter;
-    Button button;
+    public EditText input;
+    public RecyclerView recyclerView;
+    public MyAdapter ViewAdapter;
+    public Button button;
 
-    SharedPreferences MySharedPrefrance;
-    SharedPreferences.Editor MyEditor;
+    public SharedPreferences MySharedPrefrance;
+    public SharedPreferences.Editor MyEditor;
 
+    @SuppressLint("CommitPrefEdits")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

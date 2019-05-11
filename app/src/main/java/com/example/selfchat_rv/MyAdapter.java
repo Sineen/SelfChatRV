@@ -1,29 +1,48 @@
 package com.example.selfchat_rv;
 
+import android.annotation.SuppressLint;
+import android.os.AsyncTask;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 import android.content.SharedPreferences;
+
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Date.*;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import static com.example.selfchat_rv.MainActivity.DATA_LIST;
 
 class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
-    public  interface  recItemOnLongClick {
-        void itemLongClick(View view, final int position);
-    }
+    public static final String PROJEC_ID = "1ab2ca9b5913e26b";
+    public static final String PROJEC_ID_KEY = "project id";
+    private static final String TIME_STAMP_KEY = "timeStamp" ;
+    private static final String TEXT_KEY = "content";
+    private static final String ID_KEY = "id";
+    private static final String MESSAGES_KEY = "messages";
 
+    public int counterID = 0;
 
-    private ArrayList<String> myMessages;
+    private ArrayList<Message> myMessages;
     private recItemOnLongClick clicked;
     private int DataSize;
     private SharedPreferences sharedPreferences;
@@ -31,17 +50,37 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
     private Gson gson;
 
 
+    //FIREBASE
+    // Access a Cloud Firestore instance from your Activity
+    private FirebaseFirestore dataBase;
 
-    public void setData(ArrayList<String> list) {
+    MyAdapter(int size, SharedPreferences sp, SharedPreferences.Editor edit, FirebaseFirestore db){
+        myMessages = new ArrayList<Message>();
+        gson = new Gson();
+        DataSize = size;
+        sharedPreferences = sp;
+        editor = edit;
+        dataBase = db;
+    }
+
+
+    public  interface  recItemOnLongClick {
+        void itemLongClick(View view, final int position);
+    }
+
+
+    void setData(ArrayList<Message> list) {
         myMessages = list;
     }
 
     public class MyViewHolder extends RecyclerView.ViewHolder implements View.OnLongClickListener {
-        // each data item is just a string in this case
+        // each data item is just a string in this case and a time stamp
+        TextView time;
         TextView textView;
         public MyViewHolder(View v) {
             super(v);
             textView = ((TextView) v.findViewById(R.id.plain_text_output));
+            time = ((TextView) v.findViewById(R.id.timeStamp));
             v.setOnLongClickListener(this);
         }
 
@@ -58,18 +97,12 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
     }
 
 
-    public MyAdapter( int size, SharedPreferences sp, SharedPreferences.Editor edit){
-        myMessages = new ArrayList<String>();
-        gson = new Gson();
-        DataSize = size;
-        sharedPreferences = sp;
-        editor = edit;
-    }
 
     public void supportConfigurationChange() {
         notifyDataSetChanged();
     }
 
+    @NonNull
     @Override
     public MyViewHolder onCreateViewHolder( ViewGroup parent, int viewType) {
         // create a new view
@@ -83,8 +116,13 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
     }
 
 
-    public void onBindViewHolder(MyViewHolder holder, int position) {
-        holder.display(myMessages.get(position));
+    public void onBindViewHolder(@NonNull MyViewHolder holder, int position) {
+//        holder.display(myMessages.get(position));
+        String message = myMessages.get(position).getText();
+        String timestamp = myMessages.get(position).getTimeStamp( );
+        holder.textView.setText(message);
+        holder.time.setText(timestamp);
+
     }
 
     @Override
@@ -92,7 +130,7 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         return myMessages.size();
     }
 
-    public void saveEditions()
+    private void saveEditions()
     {
         editor.putInt(MainActivity.DATA_SIZE, DataSize);
         String wjson = gson.toJson(myMessages);
@@ -100,34 +138,98 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
         editor.apply();
     }
 
-    public void addMsg(String msg) {
-        myMessages.add(msg);
+    void addMsg(String msg, String id, String time) {
+        myMessages.add(new Message(id, time, msg));
         DataSize ++;
         saveEditions();
         notifyDataSetChanged();
 
     }
 
-    public void deleteMessage(int position) {
+    void deleteMessage(int position) {
+        new DeleteFromFireBase().execute(myMessages.get(position).getId());
         myMessages.remove(position);
         DataSize --;
         saveEditions();
         notifyDataSetChanged();
     }
 
-    public void setClickListener(recItemOnLongClick itemClick) {
+    void setClickListener(recItemOnLongClick itemClick) {
         this.clicked = itemClick;
     }
 
 
-    public ArrayList<String> getData() {
+    ArrayList<Message> getData() {
+
         return myMessages;
     }
 
-    public void loading( ){
+    void loading(){
         String rjson = sharedPreferences.getString(DATA_LIST, "");
         Type type = new TypeToken<List<String>>() {
         }.getType();
         myMessages = gson.fromJson(rjson, type);
+    }
+
+    private int updateID()
+    {
+        int oldId = counterID;
+        counterID++;
+        return oldId;
+    }
+
+
+    @SuppressLint("SimpleDateFormat")
+    private
+    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+
+
+    // Add a new document to the fire base and increment local id
+    public void AddMsgToFF(final String msgText){
+        String time = dateFormat.format(new Date());
+        int id = updateID();
+        Map<String, Object> message = new HashMap<>();
+
+        message.put(TIME_STAMP_KEY, time);
+        message.put(TEXT_KEY, msgText);
+        message.put(ID_KEY, id);
+
+        dataBase.collection(MESSAGES_KEY)
+                .add(message)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.d("Success ", "DocumentSnapshot added with ID: " + documentReference.getId());
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("Fail ", "Error adding document", e);
+                    }
+                });
+    }
+
+
+    @SuppressLint("StaticFieldLeak")
+    private class DeleteFromFireBase extends AsyncTask<String, Void, Void> {
+        @Override
+        protected Void doInBackground(String... strings) {
+            dataBase.collection(MESSAGES_KEY).document(strings[0])
+                    .delete()
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void aVoid) {
+                            Log.d("Success", "DocumentSnapshot successfully deleted!");
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            Log.w("Fail ", "Error deleting document", e);
+                        }
+                    });
+            return null;
+        }
     }
 }
