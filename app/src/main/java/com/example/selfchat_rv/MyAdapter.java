@@ -9,10 +9,14 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 import android.content.SharedPreferences;
 
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -35,10 +39,10 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
     public static final String PROJEC_ID = "1ab2ca9b5913e26b";
     public static final String PROJEC_ID_KEY = "project id";
-    private static final String TIME_STAMP_KEY = "timeStamp" ;
-    private static final String TEXT_KEY = "content";
-    private static final String ID_KEY = "id";
-    private static final String MESSAGES_KEY = "messages";
+    public static final String TIME_STAMP_KEY = "timeStamp" ;
+    public static final String TEXT_KEY = "content";
+    public static final String ID_KEY = "id";
+    public static final String MESSAGES_KEY = "messages";
 
     public int counterID = 0;
 
@@ -166,8 +170,7 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
 
     void loading(){
         String rjson = sharedPreferences.getString(DATA_LIST, "");
-        Type type = new TypeToken<List<String>>() {
-        }.getType();
+        Type type = new TypeToken<List<String>>() {}.getType();
         myMessages = gson.fromJson(rjson, type);
     }
 
@@ -183,6 +186,22 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
     private
     DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
 
+    public void ReadMsgFromFF(){
+        dataBase.collection(MESSAGES_KEY)
+                .get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                Log.d("Success", document.getId() + " => " + document.getData());
+                            }
+                        } else {
+                            Log.w("Fail ", "Error getting documents.", task.getException());
+                        }
+                    }
+                });
+    }
 
     // Add a new document to the fire base and increment local id
     public void AddMsgToFF(final String msgText){
