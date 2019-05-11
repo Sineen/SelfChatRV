@@ -14,6 +14,7 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -187,14 +188,18 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
     DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
 
     public void ReadMsgFromFF(){
-        dataBase.collection(MESSAGES_KEY)
+        dataBase.collection(MESSAGES_KEY).document(PROJEC_ID)
                 .get()
-                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                     @Override
-                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                         if (task.isSuccessful()) {
-                            for (QueryDocumentSnapshot document : task.getResult()) {
-                                Log.d("Success", document.getId() + " => " + document.getData());
+                            DocumentSnapshot document = task.getResult();
+                            if (document.exists()) {
+                                final String id = document.getData().get("Project_id") + "";
+                                counterID = Integer.parseInt(id);
+                            } else {
+                                Log.d("", "No such document");
                             }
                         } else {
                             Log.w("Fail ", "Error getting documents.", task.getException());
@@ -202,6 +207,7 @@ class MyAdapter extends RecyclerView.Adapter<MyAdapter.MyViewHolder> {
                     }
                 });
     }
+
 
     // Add a new document to the fire base and increment local id
     public void AddMsgToFF(final String msgText){
