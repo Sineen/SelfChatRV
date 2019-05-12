@@ -67,12 +67,16 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
         FirebaseApp.initializeApp(MainActivity.this);
         fireBase = FirebaseFirestore.getInstance();
         collectionReference = fireBase.collection(MyAdapter.COLLECTION);
-        new getFireBaseId().execute();
         int size = MySharedPrefrance.getInt(DATA_SIZE, 0);
         MyEditor = MySharedPrefrance.edit();
         ViewAdapter = new MyAdapter(size , MySharedPrefrance, MyEditor, fireBase);
         ViewAdapter.setClickListener( this);
+
+        new getFireBaseId().execute();
+
         recyclerView.setAdapter(ViewAdapter);
+
+
 
         if(size != 0 ) {
             ViewAdapter.loading();
@@ -193,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
         }
     }
 
-    /*------------------------  UI BACKGROUND THREAD ACTIVATES INSERTION ------------------------*/
+    /* BACKGROUND THREAD ACTIVATES INSERTION */
     private class insertDataToFireBase extends AsyncTask<String, Void, Void>
     {
         @Override
@@ -203,7 +207,7 @@ public class MainActivity extends AppCompatActivity implements MyAdapter.recItem
         }
     }
 
-    /*---------------------  UI BACKGROUND THREAD ACTIVATES SYNCHRONIZATION ---------------------*/
+    /*  UI BACKGROUND THREAD ACTIVATES SYNCHRONIZATION */
     public class syncLocalToRemoteFireBase extends AsyncTask<Void, Void, Void>
     {
         @Override
